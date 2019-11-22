@@ -1,4 +1,4 @@
-# OASISBloc Smart Contract with ePoA for Oracle-Net
+# OASISBloc Smart Contract
 
 ## Version : 1.0.0
 
