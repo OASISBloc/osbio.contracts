@@ -27,6 +27,8 @@ public:
     [[eosio::action]] void getosb(name account, uint64_t quantity);
 
     [[eosio::action]] void erase(name account);
+
+    [[eosio::action]] void test(name account, uint64_t quantity);
      
 
 private:
