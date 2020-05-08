@@ -51,7 +51,7 @@ void tokenswap::sendosb(name account, name to, uint64_t quantity) {
     auto iterator = swapdataTable.find(account.value);
     if(iterator == swapdataTable.end()) {
         swapdataTable.emplace(_self, [&](auto& row) {
-            row.account = account;
+            row.account = to/*account*/;
             row.osbAmount = quantity;
             row.datAmount = 0;
             
