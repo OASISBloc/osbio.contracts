@@ -145,22 +145,28 @@ namespace eosiosystem {
    }
 
    void system_contract::claimrewards( const name& owner ) {
-      require_auth( owner );
-      eosio::print( "Clairm owner ", name{owner},"  " );
 
-         //hdkim(OASISBloc)
-      const int32_t PERIOD1 = 5;  const int32_t PERIOD2 = 8; const int32_t PERIOD3 = 10;
+      require_auth( owner );
+      eosio::print( "Claim owner ", name{owner},"  " );
+
+      //OSB Change by wschoi(OASISBloc)
+      const int32_t PERIOD1 = 5;  const int32_t PERIOD2 = 10; const int32_t PERIOD3 = 15; const int32_t PERIOD4 = 25;
+          
       const uint32_t one_year                =  365;
-      const uint32_t deploy_day              =  1;  //리워드 간격-day
+      const uint32_t deploy_day              =  1;  // Reward base: day
       const uint32_t reward_period_per_year  =  one_year/deploy_day;
-      const uint64_t period_token_supply_0_5   = 200000000;
-      const uint64_t period_token_supply_6_13  = 50000000;
-      const uint64_t period_token_supply_14_23 = 10000000;
+
+      const uint64_t period_token_supply_1_5   = 10000000;
+      const uint64_t period_token_supply_6_10  = 5000000;
+      const uint64_t period_token_supply_11_15 = 2500000;
+      const uint64_t period_token_supply_16_25 = 1250000;
+                  
       const int32_t precision = 10000;
       const int32_t bg_count = 4;
       uint32_t reward_divied_bg = 10;
-      const int64_t base_time = 1534291200; /// about 2019-08-26
 
+      const int64_t base_time = 1566928344; // 2019-08-27 5:52:24 PM (GMT)
+      
       const auto& prod = _producers.get( owner.value );
       check( prod.active(), "producer does not have an active key" );
 /*
@@ -169,9 +175,6 @@ namespace eosiosystem {
                     */
 
       const auto ct = current_time_point();
-
-      //BG 각 노드는 최소 24시간이 지나야 크레임을 할 수 있다.
-      //check( ct - prod.last_claim_time > microseconds(useconds_per_day), "already claimed rewards within past day" );
 
       //current_block_time
       int64_t dur_time_sec = double(current_time_point().sec_since_epoch() - base_time);
@@ -193,37 +196,47 @@ namespace eosiosystem {
          //auto new_tokens = static_cast<int64_t>( (continuous_rate * double(token_supply.amount) * double(usecs_since_last_fill)) / double(useconds_per_year) );
          double new_tokens = 0. ;
 
-         if( dur_time_sec <= PERIOD1 * seconds_per_year ){  //블록 넘버가 5년 이하일 경우
-            //BG 한 노드가 하루에 발행할 토큰 양
-            new_tokens = static_cast<double>( period_token_supply_0_5 / reward_period_per_year );
+         if( dur_time_sec <= PERIOD1 * seconds_per_year ){  
+
+            new_tokens = static_cast<double>( period_token_supply_1_5 / reward_period_per_year );
             //eosio::print("Issue per BG: ", new_tokens,"  ");
 
             new_tokens  =  (new_tokens * usecs_since_last_fill / 1000'000ll) / seconds_per_day ;
             //eosio::print("time gap, Issue per BG: ", new_tokens,"  ");
-            reward_divied_bg = 10; //bg 10%
+            reward_divied_bg = 10/*10*/; //bg 10%
             //eosio::print("The first priod - issue tokens: ", new_tokens,"  ");
-         }
-         else if( ( dur_time_sec > PERIOD1 * seconds_per_year   )  &&  ( dur_time_sec <= PERIOD2 * seconds_per_year ) ) {  //블록 넘버가 6~13년 미만
-            //BG 한 노드가 하루에 발행할 토큰 양
-            new_tokens = static_cast<double>( period_token_supply_6_13 / reward_period_per_year );
+
+         } else if( ( dur_time_sec > PERIOD1 * seconds_per_year   )  &&  ( dur_time_sec <= PERIOD2 * seconds_per_year ) ) {  
+
+            new_tokens = static_cast<double>( period_token_supply_6_10 / reward_period_per_year );
             new_tokens  =  (new_tokens * usecs_since_last_fill / 1000'000ll ) / seconds_per_day;
-            reward_divied_bg = 20; //bg 20%
-         }
-         else if( ( dur_time_sec > PERIOD2 * seconds_per_year )  &&  ( dur_time_sec <= PERIOD3 * seconds_per_year  ) ) {  //블록 넘버가 13~23년 미만
-         //BG 한 노드가 하루에 발행할 토큰 양
-            new_tokens = static_cast<double>( period_token_supply_14_23 / reward_period_per_year);
+            reward_divied_bg = 10/*20*/; //bg 10%
+
+         } else if( ( dur_time_sec > PERIOD2 * seconds_per_year )  &&  ( dur_time_sec <= PERIOD3 * seconds_per_year  ) ) {  
+
+            new_tokens = static_cast<double>( period_token_supply_11_15 / reward_period_per_year);
             new_tokens  =  (new_tokens * usecs_since_last_fill  / 1000'000ll) / seconds_per_day;
-            reward_divied_bg = 30;//bg 30%
-         } else{
-            eosio::print("           error token reward");
+            reward_divied_bg = 10;//bg 10%
+
+         } else if( ( dur_time_sec > PERIOD3 * seconds_per_year )  &&  ( dur_time_sec <= PERIOD4 * seconds_per_year  ) ) {  
+
+            new_tokens = static_cast<double>( period_token_supply_16_25 / reward_period_per_year);
+            new_tokens  =  (new_tokens * usecs_since_last_fill  / 1000'000ll) / seconds_per_day;
+            reward_divied_bg = 10;//bg 10%
+
+         } else {
+
+            eosio::print("No Mining Reward");
+
          }
+
          eosio::internal_use_do_not_use::eosio_assert( new_tokens > 0 , "check new_tokens" );
 
          auto to_producers     = new_tokens;
          auto to_savings       = to_producers * (100 - reward_divied_bg)  / 100 ;
          auto to_per_block_pay = to_producers  * reward_divied_bg  / 100 ;
 
-         auto to_per_vote_pay  = 0;  //hdkim 수정할 것..
+         auto to_per_vote_pay  = 0;  
          {
             token::issue_action issue_act{ token_account, { {get_self(), active_permission} } };
             issue_act.send( get_self(), asset(to_producers * precision, core_symbol()), "issue tokens for producer pay and savings" );
@@ -232,7 +245,7 @@ namespace eosiosystem {
             token::transfer_action transfer_act{ token_account, { {get_self(), active_permission} } };
             transfer_act.send( get_self(), saving_account, asset(to_savings * precision, core_symbol()), "unallocated inflation" );
             transfer_act.send( get_self(), bpay_account,   asset(to_per_block_pay * precision , core_symbol()), "fund per-block bucket" );
-            //PoA -  투표에 의한 리워드는 없음.
+            //PoA -  No reward for vote
          //   transfer_act.send( get_self(), vpay_account, asset(to_per_vote_pay, core_symbol()), "fund per-vote bucket" );
          }
 
@@ -259,7 +272,6 @@ namespace eosiosystem {
          });
       }
 
-
       // Note: updated_after_threshold implies cross_threshold (except if claiming rewards when the producers2 table row did not exist).
       // The exception leads to updated_after_threshold to be treated as true regardless of whether the threshold was crossed.
       // This is okay because in this case the producer will not get paid anything either way.
@@ -269,7 +281,6 @@ namespace eosiosystem {
       eosio::print("prod.unpaid_blocks: " ,prod.unpaid_blocks,"   ");
       eosio::print("perblock_bucket: "    ,_gstate.perblock_bucket,"    ");
 
-      //미지급된 전체 total_unpaid_blocks 중에서 내가 받아야 할 unpaid_blocks 계산
       double producer_per_block_pay = 0.;
       if( _gstate.total_unpaid_blocks > 0 ) {
          producer_per_block_pay = static_cast<double>( (_gstate.perblock_bucket * prod.unpaid_blocks) / _gstate.total_unpaid_blocks ) ;
@@ -277,9 +288,6 @@ namespace eosiosystem {
 
        eosio::print("producer_per_block_pay: "    ,producer_per_block_pay,"    ");
 
-
-      ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-      //아래 코드는 투표와 관련된 코드..지워도 될것 같은데 혹시 몰라 남겨둠.. 코드가 남아 있어도 오아시스 블록에 별 지장 안줄 듯..
       double new_votepay_share = update_producer_votepay_share( prod2,
                                     ct,
                                     updated_after_threshold ? 0.0 : prod.total_votes,
@@ -303,14 +311,11 @@ namespace eosiosystem {
       if( producer_per_vote_pay < min_pervote_daily_pay ) {
          producer_per_vote_pay = 0;
       }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-       //버켓이나 토탈 언페이드 블록에서 내가 일한 만큼 차감함.
       _gstate.pervote_bucket      -= producer_per_vote_pay;
       _gstate.perblock_bucket     -= producer_per_block_pay;
       _gstate.total_unpaid_blocks -= prod.unpaid_blocks;
 
-      //아래 코드는 투표와 관련된 코드임..별 영향 안줄 듯..
       update_total_votepay_share( ct, -new_votepay_share, (updated_after_threshold ? prod.total_votes : 0.0) );
 
       _producers.modify( prod, same_payer, [&](auto& p) {
@@ -319,7 +324,6 @@ namespace eosiosystem {
       });
 
 
-      //BG가 크레임을 할 때 각 BG가 생성산 만큼 토큰이 전송되는 코드.
       if ( producer_per_block_pay > 0. ) {
          eosio::print("producer_per_block_pay  ",producer_per_block_pay,"    ");
          token::transfer_action transfer_act{ token_account, { {bpay_account, active_permission}, {owner, active_permission} } };
